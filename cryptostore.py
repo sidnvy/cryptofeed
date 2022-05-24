@@ -21,6 +21,7 @@ from cryptofeed.backends.postgres import BookPostgres, TradePostgres, TickerPost
 from cryptofeed.backends.socket import BookSocket, TradeSocket, TickerSocket, FundingSocket, CandlesSocket, OpenInterestSocket, LiquidationsSocket
 from cryptofeed.backends.influxdb import BookInflux, TradeInflux, TickerInflux, FundingInflux, CandlesInflux, OpenInterestInflux, LiquidationsInflux
 from cryptofeed.backends.quest import BookQuest, TradeQuest, TickerQuest, FundingQuest, CandlesQuest, OpenInterestQuest, LiquidationsQuest
+from cryptofeed.util.symbol import cmc_hot_symbol_regex
 
 
 async def tty(obj, receipt_ts):
@@ -35,10 +36,15 @@ def _filter_symbols(symbols: List[str], symbol_filter: str) -> List[str]:
 def load_config() -> Feed:
     exchange = os.environ.get('EXCHANGE')
     symbols = os.environ.get('SYMBOLS')
+    hot_symbols = os.environ.get('HOT_SYMBOLS')
 
     if symbols is None:
-        raise ValueError("Symbols must be specified")
-    symbols = symbols.split(",")
+        if not hot_symbols.lower().startswith('t'):
+            raise ValueError("Symbols must be specified")
+        else:
+            symbols = [cmc_hot_symbol_regex()]
+    else:
+        symbols = symbols.split(",")
 
     channels = os.environ.get('CHANNELS')
     if channels is None:
