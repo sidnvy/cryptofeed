@@ -89,7 +89,7 @@ class KuCoin(Feed):
         end = int(start) + timedelta_str_to_sec(interval) - 1
         c = Candle(
             self.id,
-            symbol,
+            self.exchange_symbol_to_std_symbol(symbol),
             int(start),
             end,
             interval,
@@ -123,7 +123,7 @@ class KuCoin(Feed):
             }
         }
         """
-        t = Ticker(self.id, symbol, Decimal(msg['data']['bestBid']), Decimal(msg['data']['bestAsk']), None, raw=msg)
+        t = Ticker(self.id, self.exchange_symbol_to_std_symbol(symbol), Decimal(msg['data']['bestBid']), Decimal(msg['data']['bestAsk']), None, raw=msg)
         await self.callback(TICKER, t, timestamp)
 
     async def _trades(self, msg: dict, symbol: str, timestamp: float):
@@ -149,7 +149,7 @@ class KuCoin(Feed):
         """
         t = Trade(
             self.id,
-            symbol,
+            self.exchange_symbol_to_std_symbol(symbol),
             BUY if msg['data']['side'] == 'buy' else SELL,
             Decimal(msg['data']['size']),
             Decimal(msg['data']['price']),
@@ -186,12 +186,13 @@ class KuCoin(Feed):
         timestamp = time.time()
         data = json.loads(data, parse_float=Decimal)
         data = data['data']
-        self.seq_no[symbol] = int(data['sequence'])
+        pair = self.exchange_symbol_to_std_symbol(symbol)
+        self.seq_no[pair] = int(data['sequence'])
         bids = {Decimal(price): Decimal(amount) for price, amount in data['bids']}
         asks = {Decimal(price): Decimal(amount) for price, amount in data['asks']}
-        self._l2_book[symbol] = OrderBook(self.id, symbol, max_depth=self.max_depth, bids=bids, asks=asks)
+        self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
 
-        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, raw=data, sequence_number=int(data['sequence']))
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=data, sequence_number=int(data['sequence']))
 
     async def _process_l2_book(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -212,16 +213,17 @@ class KuCoin(Feed):
         """
         data = msg['data']
         sequence = data['sequenceStart']
-        if symbol not in self._l2_book or sequence > self.seq_no[symbol] + 1:
-            if symbol in self.seq_no and sequence > self.seq_no[symbol] + 1:
+        pair = self.exchange_symbol_to_std_symbol(symbol)
+        if pair not in self._l2_book or sequence > self.seq_no[pair] + 1:
+            if pair in self.seq_no and sequence > self.seq_no[pair] + 1:
                 LOG.warning("%s: Missing book update detected, resetting book", self.id)
             await self._snapshot(symbol)
 
         data = msg['data']
-        if sequence < self.seq_no[symbol]:
+        if sequence < self.seq_no[pair]:
             return
 
-        self.seq_no[symbol] = data['sequenceEnd']
+        self.seq_no[pair] = data['sequenceEnd']
 
         delta = {BID: [], ASK: []}
         for s, side in (('bids', BID), ('asks', ASK)):
@@ -230,14 +232,14 @@ class KuCoin(Feed):
                 amount = Decimal(update[1])
 
                 if amount == 0:
-                    if price in self._l2_book[symbol].book[side]:
-                        del self._l2_book[symbol].book[side][price]
+                    if price in self._l2_book[pair].book[side]:
+                        del self._l2_book[pair].book[side][price]
                         delta[side].append((price, amount))
                 else:
-                    self._l2_book[symbol].book[side][price] = amount
+                    self._l2_book[pair].book[side][price] = amount
                     delta[side].append((price, amount))
 
-        await self.book_callback(L2_BOOK, self._l2_book[symbol], timestamp, delta=delta, raw=msg, sequence_number=data['sequenceEnd'])
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg, sequence_number=data['sequenceEnd'])
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)

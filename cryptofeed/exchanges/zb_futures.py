@@ -29,7 +29,7 @@ class ZbFutures(Feed):
     ]
     rest_endpoints = [RestEndpoint('https://fapi.zb.com', routes=Routes(['/usdt/Server/api/v2/config/marketList', '/qc/Server/api/v2/config/marketList']))]
     websocket_channels = {
-        L2_BOOK: 'Depth',
+        L2_BOOK: 'DepthWhole',  # Depth increment update fails all the time (bid ask overlaps), use snapshot instead
         TRADES: 'Trade',
     }
     request_limit = 60
@@ -59,7 +59,7 @@ class ZbFutures(Feed):
 
     def __reset(self):
         self._l2_book = {}
-        self._last_server_time = defaultdict(int)
+        # self._last_server_time = defaultdict(int)
 
     async def _book(self, msg: dict, timestamp: float):
         """
@@ -103,10 +103,10 @@ class ZbFutures(Feed):
         pair = self.exchange_symbol_to_std_symbol(symbol)
         server_time = int(msg['data']['time'])
 
-        if server_time < self._last_server_time[pair]:
-            LOG.warning(f"ZB_FUTURES {symbol} OrderBook update out of order")
-            return
-        self._last_server_time[pair] = server_time
+        # if server_time < self._last_server_time[pair]:
+        #     LOG.warning(f"ZB_FUTURES {symbol} OrderBook update out of order")
+        #     return
+        # self._last_server_time[pair] = server_time
 
         if "type" in msg and msg['type'] == 'Whole':
             await self._book_snapshot(msg, timestamp)
@@ -128,7 +128,7 @@ class ZbFutures(Feed):
                         delta[side].append((price, amount))
                         self._l2_book[pair].book[side][price] = amount
 
-            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(server_time), delta=delta, raw=msg)
+            await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(server_time), delta=delta, raw=msg, sequence_number=server_time)
 
     async def _book_snapshot(self, msg: dict, timestamp: float):
         symbol = msg['channel'].partition('.')[0]
@@ -136,12 +136,12 @@ class ZbFutures(Feed):
 
         # snapshot
         server_time = int(msg['data']['time'])
-        self._last_server_time[pair] = server_time
+        # self._last_server_time[pair] = server_time
 
         bids = {Decimal(price): Decimal(amount) for price, amount in msg['data']['bids']}
         asks = {Decimal(price): Decimal(amount) for price, amount in msg['data']['asks']}
         self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(server_time), raw=msg)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(server_time), raw=msg, sequence_number=server_time)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
