@@ -49,6 +49,8 @@ from .okx import OKX
 from .poloniex import Poloniex
 from .probit import Probit
 from .upbit import Upbit
+from .zb import Zb
+from .zb_futures import ZbFutures
 
 # Maps string name to class name for use with config
 EXCHANGE_MAP = {
@@ -95,4 +97,6 @@ EXCHANGE_MAP = {
     POLONIEX: Poloniex,
     PROBIT: Probit,
     UPBIT: Upbit,
+    ZB: Zb,
+    ZB_FUTURES: ZbFutures,
 }
