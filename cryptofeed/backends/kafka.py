@@ -12,6 +12,7 @@ from aiokafka import AIOKafkaProducer
 from yapic import json
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
+from cryptofeed.util.symbol import unify_exchange_name
 
 
 class KafkaCallback:
@@ -43,10 +44,11 @@ class KafkaCallback:
             await self.producer.start()
 
     def topic(self, data: dict) -> str:
-        return f"{self.key}-{data['exchange']}-{data['symbol']}"
+        unified_exchange = unify_exchange_name(data['exchange'])
+        return f"{self.key}-{unified_exchange}"
 
     def partition_key(self, data: dict) -> Optional[bytes]:
-        return None
+        return f"{data['symbol']}".encode('utf-8')
 
     def partition(self, data: dict) -> Optional[int]:
         return None
