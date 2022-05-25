@@ -14,7 +14,7 @@ from typing import Dict, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, ZB_FUTURES, L2_BOOK, SELL, TRADES, PERPETUAL
+from cryptofeed.defines import BID, ASK, BUY, TICKER, ZB_FUTURES, L2_BOOK, SELL, TRADES, PERPETUAL
 from cryptofeed.feed import Feed
 from cryptofeed.types import OrderBook, Trade
 
@@ -172,7 +172,7 @@ class ZbFutures(Feed):
                 BUY if trade[2] > 0 else SELL,
                 Decimal(trade[1]),
                 Decimal(trade[0]),
-                self.timestamp_normalize(trade[3]),
+                trade[3],
                 raw=trade
             )
             await self.callback(TRADES, t, timestamp)

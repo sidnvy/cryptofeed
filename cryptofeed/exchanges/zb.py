@@ -8,8 +8,8 @@ from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
 from cryptofeed.feed import Feed
-from cryptofeed.defines import BID, ASK, BUY, ZB as ZB_str, L2_BOOK, SELL, TRADES, SPOT
-from cryptofeed.types import OrderBook, Trade
+from cryptofeed.defines import BID, ASK, BUY, TICKER, ZB as ZB_str, L2_BOOK, SELL, TRADES, SPOT
+from cryptofeed.types import OrderBook, Trade, Ticker
 
 LOG = logging.getLogger("feedhandler")
 
@@ -20,6 +20,7 @@ class Zb(Feed):
     websocket_channels = {
         L2_BOOK: 'depth',
         TRADES: 'trades',
+        TICKER: 'ticker',
     }
     request_limit = 60
 
@@ -117,7 +118,7 @@ class Zb(Feed):
 
         self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(server_time), raw=msg)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=server_time, raw=msg)
 
     async def _trade(self, msg: dict, timestamp: float):
         """
@@ -170,11 +171,44 @@ class Zb(Feed):
                 BUY if trade['type'] == 'buy' else SELL,
                 Decimal(trade['amount']),
                 Decimal(trade['price']),
-                self.timestamp_normalize(trade['date']),
+                trade['date'],
                 id=str(trade["tid"]),
                 raw=trade
             )
             await self.callback(TRADES, t, timestamp)
+
+    async def _ticker(self, msg: dict, timestamp: float):
+        """
+        {
+            "date": "1653460062279",
+            "ticker": {
+                "high": "0.002439",
+                "vol": "24.942",
+                "last": "0.002419",
+                "low": "0.002419",
+                "buy": "0.002333",
+                "sell": "0.002431",
+                "turnover": "0.060",
+                "open": "0.002439",
+                "riseRate": "-0.82"
+            },
+            "dataType": "ticker",
+            "channel": "ltcbtc_ticker"
+        }
+
+        """
+        symbol = msg['channel'].partition('_')[0]
+        pair = self.exchange_symbol_to_std_symbol(symbol)
+        t = Ticker(
+            self.id,
+            pair,
+            Decimal(msg['ticker']['buy']),
+            Decimal(msg['ticker']['sell']),
+            self.timestamp_normalize(int(msg['date'])),
+            raw=msg
+        )
+        await self.callback(TICKER, t, timestamp)
+
 
     async def message_handler(self, msg: str, conn: AsyncConnection, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -184,6 +218,8 @@ class Zb(Feed):
                 await self._book(msg, timestamp)
             elif msg['dataType'] == 'trades':
                 await self._trade(msg, timestamp)
+            elif msg['dataType'] == 'ticker':
+                await self._ticker(msg, timestamp)
             else:
                 LOG.warning("%s: unexpected channel type received: %s", self.id, msg)
         else:
