@@ -44,8 +44,7 @@ class KafkaCallback:
             await self.producer.start()
 
     def topic(self, data: dict) -> str:
-        unified_exchange = unify_exchange_name(data['exchange'])
-        return f"{self.key}-{unified_exchange}"
+        return f"{self.key}-{data['exchange']}"
 
     def partition_key(self, data: dict) -> Optional[bytes]:
         return f"{data['symbol']}".encode('utf-8')
@@ -55,6 +54,8 @@ class KafkaCallback:
 
     async def write(self, data: dict):
         await self.__connect()
+        data['exchange'] = unify_exchange_name(data['exchange'])
+
         await self.producer.send_and_wait(self.topic(data), json.dumps(data).encode('utf-8'), self.partition_key(data), self.partition(data))
 
 
