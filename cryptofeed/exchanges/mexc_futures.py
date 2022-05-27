@@ -100,8 +100,9 @@ class MexcFutures(Feed):
         if version < self.last_update_id[pair]:
             return
         elif version > self.last_update_id[pair] + 1:
-            self.__reset()
-            LOG.warning("%s: Missing book update detected, resetting book", self.id)
+            del self._l2_book[pair]
+            del self.last_update_id[pair]
+            LOG.warning("%s: Missing %s book update detected, resetting book", self.id, pair)
             return
 
         self.last_update_id[pair] = version
