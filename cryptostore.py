@@ -45,13 +45,13 @@ def _filter_symbols(symbols: List[str], symbol_filter: str) -> List[str]:
 def load_config() -> List[Feed]:
     exchange = os.environ.get('EXCHANGE')
     symbols = os.environ.get('SYMBOLS')
-    hot_symbols = os.environ.get('HOT_SYMBOLS')
+    hot_symbols = int(os.environ.get('HOT_SYMBOLS', 0))
 
     if symbols is None:
-        if not hot_symbols.lower().startswith('t'):
+        if hot_symbols == 0:
             raise ValueError("Symbols must be specified")
         else:
-            symbols = [cmc_hot_symbol_regex()]
+            symbols = [cmc_hot_symbol_regex(hot_symbols)]
     else:
         symbols = symbols.split(",")
 
@@ -194,6 +194,7 @@ def load_config() -> List[Feed]:
 
     batch_size = int(os.environ.get('BATCH_SYMBOLS', 0))
     LOG.warning(f"Subscribe {channels} channels for {len(symbols)} symbols on {ex.id} with { math.ceil(len(symbols)/batch_size) if batch_size > 0 else 1} feeds")
+    LOG.warning(symbols)
 
     if batch_size == 0:
         return [ex(candle_intterval=candle_interval, symbols=symbols, channels=channels, config=config, callbacks=cbs, max_depth=10)]
