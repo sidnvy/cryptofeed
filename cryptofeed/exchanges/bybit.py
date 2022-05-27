@@ -315,7 +315,7 @@ class Bybit(Feed):
                 )
                 await self.callback(INDEX, i, timestamp)
 
-            if 'funding_rate_e6' in info and 'next_funding_time' in info:
+            if 'funding_rate_e6' in info and 'next_funding_time' in info and 'predicted_funding_rate_e6' in info:
                 f = Funding(
                     self.id,
                     self.exchange_symbol_to_std_symbol(info['symbol']),
