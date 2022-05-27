@@ -33,6 +33,7 @@ class KafkaCallback:
         self.none_to = none_to
         self.acks = acks
         self.client_id = client_id
+        self._producer_started = False
 
     async def __connect(self):
         if not self.producer:
@@ -42,6 +43,13 @@ class KafkaCallback:
                                              bootstrap_servers=f'{self.bootstrap}:{self.port}' if isinstance(self.bootstrap, str) else self.bootstrap,
                                              client_id=self.client_id)
             await self.producer.start()
+            self._producer_started = True
+        elif not self._producer_started:
+            await self._wait_for_producer_connected()
+
+    async def _wait_for_producer_connected(self):
+        while not self._producer_started:
+            await asyncio.sleep(0)
 
     def topic(self, data: dict) -> str:
         return f"{self.key}-{data['exchange']}"
