@@ -4,6 +4,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from datetime import datetime
+import math
 import os
 from typing import List
 import re
@@ -23,6 +24,9 @@ from cryptofeed.backends.influxdb import BookInflux, TradeInflux, TickerInflux, 
 from cryptofeed.backends.quest import BookQuest, TradeQuest, TickerQuest, FundingQuest, CandlesQuest, OpenInterestQuest, LiquidationsQuest
 from cryptofeed.util.symbol import cmc_hot_symbol_regex
 
+import logging
+
+LOG = logging.getLogger('feedhandler')
 
 def chunks(lst, n):
     """Yield successive n-sized chunks from lst."""
@@ -188,16 +192,16 @@ def load_config() -> List[Feed]:
     if len(symbols) == 1:
         symbols = _filter_symbols(ex.symbols(), symbols[0])
 
-    print(f"Subscribe all channels for {len(symbols)} symbols.({symbols[:5]}...)")
-
-
     batch_size = int(os.environ.get('BATCH_SYMBOLS', 0))
+    LOG.warning(f"Subscribe {channels} channels for {len(symbols)} symbols on {ex.id} with { math.ceil(len(symbols)/batch_size) if batch_size > 0 else 1} feeds")
+
     if batch_size == 0:
         return [ex(candle_intterval=candle_interval, symbols=symbols, channels=channels, config=config, callbacks=cbs, max_depth=10)]
 
     feeds = []
     for syms in chunks(symbols, batch_size):
         feeds.append(ex(candle_intterval=candle_interval, symbols=syms, channels=channels, config=config, callbacks=cbs, max_depth=10))
+
     return feeds
 
 
