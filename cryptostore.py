@@ -75,6 +75,8 @@ def load_config() -> Feed:
     bucket = os.environ.get('BUCKET')
     token = os.environ.get('TOKEN')
 
+    ticker_from_book = bool(os.environ.get('TICKER_FROM_BOOK', False))
+
     cbs = None
     if backend == 'REDIS' or backend == 'REDISSTREAM':
         kwargs = {'host': host, 'port': port if port else 6379}
@@ -94,7 +96,7 @@ def load_config() -> Feed:
         bootstrap_servers = bootstrap_servers.split(",")
         kwargs = {'bootstrap': bootstrap_servers}
         cbs = {
-            L2_BOOK: BookKafka(snapshot_interval=snap_interval, snapshots_only=snap_only, **kwargs),
+            L2_BOOK: BookKafka(snapshot_interval=snap_interval, snapshots_only=snap_only, extract_ticker=ticker_from_book, **kwargs),
             TRADES: TradeKafka(**kwargs),
             TICKER: TickerKafka(**kwargs),
             FUNDING: FundingKafka(**kwargs),
@@ -102,6 +104,7 @@ def load_config() -> Feed:
             OPEN_INTEREST: OpenInterestKafka(**kwargs),
             LIQUIDATIONS: LiquidationsKafka(**kwargs)
         }
+
     elif backend == 'MONGO':
         kwargs = {'host': host, 'port': port if port else 27101}
         cbs = {

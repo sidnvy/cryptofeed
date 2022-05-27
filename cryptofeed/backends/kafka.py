@@ -58,6 +58,17 @@ class KafkaCallback:
 
         await self.producer.send_and_wait(self.topic(data), json.dumps(data).encode('utf-8'), self.partition_key(data), self.partition(data))
 
+    async def write_ticker(self, data: dict):  # Used on extract_ticker from book
+        await self.__connect()
+        data['exchange'] = unify_exchange_name(data['exchange'])
+
+        await self.producer.send_and_wait(
+            f"ticker-{data['exchange']}",
+            json.dumps(data).encode('utf-8'),
+            self.partition_key(data),
+            self.partition(data)
+        )
+
 
 class TradeKafka(KafkaCallback, BackendCallback):
     default_key = 'trades'
@@ -66,20 +77,18 @@ class TradeKafka(KafkaCallback, BackendCallback):
 class FundingKafka(KafkaCallback, BackendCallback):
     default_key = 'funding'
 
-
 class BookKafka(KafkaCallback, BackendBookCallback):
     default_key = 'book'
 
-    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, **kwargs):
+    def __init__(self, *args, snapshots_only=False, snapshot_interval=1000, extract_ticker=False, **kwargs):
         self.snapshots_only = snapshots_only
         self.snapshot_interval = snapshot_interval
         self.snapshot_count = defaultdict(int)
+        self.extract_ticker = extract_ticker
         super().__init__(*args, **kwargs)
-
 
 class TickerKafka(KafkaCallback, BackendCallback):
     default_key = 'ticker'
-
 
 class OpenInterestKafka(KafkaCallback, BackendCallback):
     default_key = 'open_interest'

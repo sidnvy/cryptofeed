@@ -96,7 +96,6 @@ class BackendCallback:
         data['receipt_timestamp'] = receipt_timestamp
         await self.write(data)
 
-
 class BackendBookCallback:
     async def _write_snapshot(self, book, receipt_timestamp: float):
         data = book.to_dict(numeric_type=self.numeric_type, none_to=self.none_to)
@@ -106,7 +105,18 @@ class BackendBookCallback:
         data['receipt_timestamp'] = receipt_timestamp
         await self.write(data)
 
+    async def _write_ticker(self, book, receipt_timestamp: float):
+        data = book.to_ticker_dict(numeric_type=self.numeric_type, none_to=self.none_to)
+        if not book.timestamp:
+            data['timestamp'] = receipt_timestamp
+        data['receipt_timestamp'] = receipt_timestamp
+        await self.write_ticker(data)
+
     async def __call__(self, book, receipt_timestamp: float):
+        # Write best bid ask to ticker directly
+        if self.extract_ticker:
+            await self._write_ticker(book, receipt_timestamp)
+
         if self.snapshots_only:
             await self._write_snapshot(book, receipt_timestamp)
         else:

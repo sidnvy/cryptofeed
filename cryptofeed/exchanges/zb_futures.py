@@ -199,6 +199,6 @@ class ZbFutures(Feed):
             for symbol in symbols:
                 msg = {"action": "subscribe", "channel": f"{symbol}.{chan}"}
                 if chan == "Depth" and self.max_depth > 0:
-                    msg["size"] = self.max_depth
+                    msg["size"] = 10 if self.max_depth >= 10 else self.max_depth
                 await conn.write(json.dumps(msg))
 

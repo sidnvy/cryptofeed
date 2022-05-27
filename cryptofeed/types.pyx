@@ -423,6 +423,17 @@ cdef class OrderBook:
             ASK: [tuple([numeric_type(v) if isinstance(v, Decimal) else v for v in value]) for value in self.delta[ASK]]
         }
 
+    def to_ticker_dict(self, delta=False, numeric_type=None, none_to=False) -> dict:
+        best_bid, _ = self.book.bids.index(0)
+        best_ask, _ = self.book.asks.index(0)
+
+        if numeric_type is None:
+            data = {"exchange": self.exchange, 'symbol': self.symbol, 'bid': best_bid, 'ask': best_ask, 'timestamp': self.timestamp}
+        else:
+            data = {"exchange": self.exchange, 'symbol': self.symbol, 'bid': numeric_type(best_bid), 'ask': numeric_type(best_ask), 'timestamp': self.timestamp}
+        return data if not none_to else convert_none_values(data, none_to)
+
+
     def to_dict(self, delta=False, numeric_type=None, none_to=False) -> dict:
         assert self.sequence_number is None or isinstance(self.sequence_number, int)
         assert self.checksum is None or isinstance(self.checksum, (str, int))
