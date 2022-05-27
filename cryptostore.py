@@ -24,6 +24,11 @@ from cryptofeed.backends.quest import BookQuest, TradeQuest, TickerQuest, Fundin
 from cryptofeed.util.symbol import cmc_hot_symbol_regex
 
 
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]
+
 async def tty(obj, receipt_ts):
     # For debugging purposes
     rts = datetime.utcfromtimestamp(receipt_ts).strftime('%Y-%m-%d %H:%M:%S')
@@ -33,7 +38,7 @@ def _filter_symbols(symbols: List[str], symbol_filter: str) -> List[str]:
     pat = re.compile(symbol_filter)
     return list(filter(lambda s: pat.match(s), symbols))
 
-def load_config() -> Feed:
+def load_config() -> List[Feed]:
     exchange = os.environ.get('EXCHANGE')
     symbols = os.environ.get('SYMBOLS')
     hot_symbols = os.environ.get('HOT_SYMBOLS')
@@ -185,13 +190,21 @@ def load_config() -> Feed:
 
     print(f"Subscribe all channels for {len(symbols)} symbols.({symbols[:5]}...)")
 
-    return ex(candle_intterval=candle_interval, symbols=symbols, channels=channels, config=config, callbacks=cbs, max_depth=10)
+
+    batch_size = int(os.environ.get('BATCH_SYMBOLS', 0))
+    if batch_size == 0:
+        return [ex(candle_intterval=candle_interval, symbols=symbols, channels=channels, config=config, callbacks=cbs, max_depth=10)]
+
+    feeds = []
+    for syms in chunks(symbols, batch_size):
+        feeds.append(ex(candle_intterval=candle_interval, symbols=syms, channels=channels, config=config, callbacks=cbs, max_depth=10))
+    return feeds
 
 
 def main():
     fh = FeedHandler()
-    cfg = load_config()
-    fh.add_feed(cfg)
+    for cfg in load_config():
+        fh.add_feed(cfg)
     fh.run()
 
 
