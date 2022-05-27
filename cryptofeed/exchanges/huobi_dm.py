@@ -87,6 +87,9 @@ class HuobiDM(Feed):
 
             await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['ts']), raw=msg)
 
+    async def _ticker(self, msg: dict, timestamp: float):
+        pass
+
     async def _trade(self, msg: dict, timestamp: float):
         """
         {
@@ -127,6 +130,8 @@ class HuobiDM(Feed):
                 await self._trade(msg, timestamp)
             elif 'depth' in msg['ch']:
                 await self._book(msg, timestamp)
+            elif 'bbo' in msg['ch']:
+                await self._ticker(msg, timestamp)
             else:
                 LOG.warning("%s: Invalid message type %s", self.id, msg)
         else:

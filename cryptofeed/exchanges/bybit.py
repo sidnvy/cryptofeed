@@ -16,9 +16,9 @@ from datetime import datetime as dt
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL
+from cryptofeed.defines import BID, ASK, BUY, BYBIT, CANCELLED, CANCELLING, CANDLES, FAILED, FILLED, FUNDING, L2_BOOK, LIMIT, LIQUIDATIONS, MAKER, MARKET, OPEN, PARTIAL, SELL, SUBMITTING, TAKER, TICKER, TRADES, OPEN_INTEREST, INDEX, ORDER_INFO, FILLS, FUTURES, PERPETUAL
 from cryptofeed.feed import Feed
-from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle, Liquidation
+from cryptofeed.types import OrderBook, Trade, Index, OpenInterest, Funding, OrderInfo, Fill, Candle, Liquidation, Ticker
 
 
 LOG = logging.getLogger('feedhandler')
@@ -27,8 +27,9 @@ LOG = logging.getLogger('feedhandler')
 class Bybit(Feed):
     id = BYBIT
     websocket_channels = {
-        L2_BOOK: 'orderBook_200.100ms',
+        L2_BOOK: 'orderBookL2_25',
         TRADES: 'trade',
+        TICKER: 'instrument_info.100ms',
         FILLS: 'execution',
         ORDER_INFO: 'order',
         INDEX: 'instrument_info.100ms',
@@ -314,7 +315,7 @@ class Bybit(Feed):
                 )
                 await self.callback(INDEX, i, timestamp)
 
-            if 'funding_rate_e6' in info:
+            if 'funding_rate_e6' in info and 'next_funding_time' in info:
                 f = Funding(
                     self.id,
                     self.exchange_symbol_to_std_symbol(info['symbol']),
@@ -326,6 +327,20 @@ class Bybit(Feed):
                     raw=info
                 )
                 await self.callback(FUNDING, f, timestamp)
+
+            if 'bid1_price' in info and 'ask1_price' in info:
+                bid = Decimal(info['bid1_price']) * Decimal('1e-4')
+                ask = Decimal(info['ask1_price']) * Decimal('1e-4')
+                t = Ticker(
+                    self.id,
+                    self.exchange_symbol_to_std_symbol(info['symbol']),
+                    bid,
+                    ask,
+                    ts,
+                    raw=msg
+                )
+                await self.callback(TICKER, t, timestamp)
+
 
     async def _trade(self, msg: dict, timestamp: float):
         """

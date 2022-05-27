@@ -116,6 +116,7 @@ class BackendBookCallback:
         # Write best bid ask to ticker directly
         if self.extract_ticker:
             await self._write_ticker(book, receipt_timestamp)
+            return
 
         if self.snapshots_only:
             await self._write_snapshot(book, receipt_timestamp)

@@ -15,9 +15,9 @@ from typing import Dict, Tuple
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import HUOBI_SWAP, FUNDING, PERPETUAL
+from cryptofeed.defines import HUOBI_SWAP, FUNDING, PERPETUAL, TICKER
 from cryptofeed.exchanges.huobi_dm import HuobiDM
-from cryptofeed.types import Funding
+from cryptofeed.types import Funding, Ticker
 
 
 LOG = logging.getLogger('feedhandler')
@@ -36,6 +36,7 @@ class HuobiSwap(HuobiDM):
 
     websocket_channels = {
         **HuobiDM.websocket_channels,
+        TICKER: 'bbo',
         FUNDING: 'funding'
     }
 
@@ -57,6 +58,41 @@ class HuobiSwap(HuobiDM):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.funding_updates = {}
+
+    async def _ticker(self, msg: dict, timestamp: float):
+        """
+        {
+            "ch":"market.BTC-USD.bbo",
+            "ts":1603876157423,
+            "tick":{
+                "mrid":50997449846,
+                "id":1603876157,
+                "bid":[
+                    13684.5,
+                    10615
+                ],
+                "ask":[
+                    13684.6,
+                    3440
+                ],
+                "ts":1603876157421,
+                "version":50997449846,
+                "ch":"market.BTC-USD.bbo"
+            }
+        }
+
+        """
+        pair = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
+        t = Ticker(
+            self.id,
+            pair,
+            Decimal(msg['tick']['bid'][0]),
+            Decimal(msg['tick']['ask'][0]),
+            self.timestamp_normalize(msg['tick']['ts']),
+            raw=msg
+        )
+        await self.callback(TICKER, t, timestamp)
+
 
     async def _funding(self, pairs):
         """
