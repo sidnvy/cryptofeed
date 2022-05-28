@@ -19,7 +19,7 @@ class MexcFutures(Feed):
     websocket_endpoints = [WebsocketEndpoint('wss://contract.mexc.com/ws')]
     rest_endpoints = [RestEndpoint('https://contract.mexc.com', routes=Routes('/api/v1/contract/detail', l2book='/api/v1/contract/depth/{}?limit={}'))]
     websocket_channels = {
-        L2_BOOK: 'sub.depth',
+        L2_BOOK: 'sub.depth.full',
         TRADES: 'sub.deal',
         # TICKER: 'sub.ticker',  # quote ticker limit one symbol per connection
     }
@@ -71,6 +71,15 @@ class MexcFutures(Feed):
         self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
         await self.book_callback(L2_BOOK, self._l2_book[pair], time.time(), timestamp=self.timestamp_normalize(server_time), raw=resp, sequence_number=version)
 
+    async def _book_snapshot(self, msg: dict, timestamp: float):
+        symbol = msg['symbol']
+        version = msg['data']['version']
+        pair = self.exchange_symbol_to_std_symbol(symbol)
+        bids = {Decimal(price): Decimal(amount) for price, amount, *_ in msg['data']['bids']}
+        asks = {Decimal(price): Decimal(amount) for price, amount, *_ in msg['data']['asks']}
+        self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=self.timestamp_normalize(msg['ts']), raw=msg, sequence_number=version)
+
     async def _book(self, msg: dict, timestamp: float):
         """
         {
@@ -97,13 +106,13 @@ class MexcFutures(Feed):
             await self._snapshot(symbol)
 
         version = msg['data']['version']
-        if version < self.last_update_id[pair]:
-            return
-        elif version > self.last_update_id[pair] + 1:
-            del self._l2_book[pair]
-            del self.last_update_id[pair]
-            LOG.warning("%s: Missing %s book update detected, resetting book", self.id, pair)
-            return
+        # if version <= self.last_update_id[pair]:
+        #     return
+        # elif version > self.last_update_id[pair] + 1:
+        #     del self._l2_book[pair]
+        #     del self.last_update_id[pair]
+        #     LOG.warning("%s: Missing %s book update detected, resetting book", self.id, pair)
+        #     return
 
         self.last_update_id[pair] = version
 
@@ -196,6 +205,8 @@ class MexcFutures(Feed):
 
         if msg['channel'] == 'push.depth':
             await self._book(msg, timestamp)
+        elif msg['channel'] == 'push.depth.full':
+            await self._book_snapshot(msg, timestamp)
         elif msg['channel'] == 'push.deal':
             await self._trade(msg, timestamp)
         elif msg['channel'] == 'push.ticker':
@@ -222,6 +233,8 @@ class MexcFutures(Feed):
                         "symbol": symbol,
                     },
                 }
+                if chan == 'sub.depth.full':
+                    msg['param']['limit'] = 5
                 await conn.write(json.dumps(msg))
 
     async def pager(self, conn: AsyncConnection):
