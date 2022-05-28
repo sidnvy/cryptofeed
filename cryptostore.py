@@ -209,7 +209,7 @@ def load_config() -> List[Feed]:
 
 def main():
     fh = FeedHandler()
-    for cfg in load_config()
+    for cfg in load_config():
         fh.add_feed(cfg)
     fh.run()
 
