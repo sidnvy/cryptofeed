@@ -82,10 +82,12 @@ class HuobiSwap(HuobiDM):
         }
 
         """
-        pair = self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1])
+        if not ('bid' in msg['tick'] and 'ask' in msg['tick']):
+            return
+
         t = Ticker(
             self.id,
-            pair,
+            self.exchange_symbol_to_std_symbol(msg['ch'].split('.')[1]),
             Decimal(msg['tick']['bid'][0]),
             Decimal(msg['tick']['ask'][0]),
             self.timestamp_normalize(msg['tick']['ts']),

@@ -5,6 +5,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 import logging
+import os
 import time
 import asyncio
 from asyncio import Queue, CancelledError
@@ -359,6 +360,9 @@ class WebsocketEndpoint:
         if self.options:
             defaults.update(self.options)
         self.options = defaults
+        default_batch_limit = os.environ.get("WS_BATCH_LIMIT")
+        if self.limit is None and default_batch_limit is not None:
+            self.limit = int(default_batch_limit)
 
     def subscription_filter(self, sub: dict) -> dict:
         if not self.instrument_filter and not self.channel_filter:

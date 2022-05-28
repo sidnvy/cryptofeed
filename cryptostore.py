@@ -4,6 +4,7 @@ Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
 from datetime import datetime
+from functools import reduce
 import math
 import os
 from typing import List
@@ -196,22 +197,21 @@ def load_config() -> List[Feed]:
     LOG.warning(f"Subscribe {channels} channels for {len(symbols)} symbols on {ex.id} with { math.ceil(len(symbols)/batch_size) if batch_size > 0 else 1} feeds")
     LOG.warning(symbols)
 
-    if batch_size == 0:
-        return [ex(candle_intterval=candle_interval, symbols=symbols, channels=channels, config=config, callbacks=cbs, max_depth=10)]
-
     feeds = []
-    for syms in chunks(symbols, batch_size):
-        feeds.append(ex(candle_intterval=candle_interval, symbols=syms, channels=channels, config=config, callbacks=cbs, max_depth=10))
+    if batch_size == 0:
+        feeds.append(ex(candle_intterval=candle_interval, symbols=symbols, channels=channels, config=config, callbacks=cbs, max_depth=10))
+    else:
+        for syms in chunks(symbols, batch_size):
+            feeds.append(ex(candle_intterval=candle_interval, symbols=syms, channels=channels, config=config, callbacks=cbs, max_depth=10))
 
     return feeds
 
 
 def main():
     fh = FeedHandler()
-    for cfg in load_config():
+    for cfg in load_config()
         fh.add_feed(cfg)
     fh.run()
-
 
 if __name__ == '__main__':
     main()
