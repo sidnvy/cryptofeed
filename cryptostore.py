@@ -44,16 +44,15 @@ def _filter_symbols(symbols: List[str], symbol_filter: str) -> List[str]:
     pat = re.compile(symbol_filter)
     return list(filter(lambda s: pat.match(s), symbols))
 
-def load_config(exchange) -> List[Feed]:
+def load_config(exchange, hot_symbols=None) -> List[Feed]:
     # exchange = os.environ.get('EXCHANGE')
     symbols = os.environ.get('SYMBOLS')
-    hot_symbols = int(os.environ.get('HOT_SYMBOLS', 0))
 
     if symbols is None:
-        if hot_symbols == 0:
+        if hot_symbols is None:
             raise ValueError("Symbols must be specified")
         else:
-            symbols = [cmc_hot_symbol_regex(hot_symbols)]
+            symbols = hot_symbols
     else:
         symbols = symbols.split(",")
 
@@ -222,8 +221,14 @@ def load_config(exchange) -> List[Feed]:
 def main():
     fh = FeedHandler()
     exchanges = os.environ['EXCHANGES'].split(',')
+
+    hot_symbols_num = int(os.environ.get('HOT_SYMBOLS', 0))
+    hot_symbols = None
+    if hot_symbols_num > 0:
+         hot_symbols = [cmc_hot_symbol_regex(hot_symbols_num)]
+
     for exchange in exchanges:
-        for cfg in load_config(exchange):
+        for cfg in load_config(exchange, hot_symbols):
             fh.add_feed(cfg)
     fh.run()
 
