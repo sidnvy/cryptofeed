@@ -10,7 +10,7 @@ from .bitdotcom import BitDotCom
 from .phemex import Phemex
 from .ascendex import AscendEX
 from .ascendex_futures import AscendEXFutures
-# from .bequant import Bequant
+from .bequant import Bequant
 from .binance import Binance
 from .binance_delivery import BinanceDelivery
 from .binance_futures import BinanceFutures
@@ -59,7 +59,7 @@ from .zb_futures import ZbFutures
 EXCHANGE_MAP = {
     ASCENDEX: AscendEX,
     ASCENDEX_FUTURES: AscendEXFutures,
-    # BEQUANT: Bequant,
+    BEQUANT: Bequant,
     BINANCE_DELIVERY: BinanceDelivery,
     BINANCE_FUTURES: BinanceFutures,
     BINANCE_US: BinanceUS,

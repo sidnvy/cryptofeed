@@ -6,11 +6,11 @@ associated with this software.
 '''
 import pytest
 
-from cryptofeed.defines import EXX
+from cryptofeed.defines import BEQUANT, EXX
 from cryptofeed.exchanges import EXCHANGE_MAP
 
 
-@pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [EXX]])
+@pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [EXX, BEQUANT]])
 def test_symbol_conversion(exchange):
     feed = EXCHANGE_MAP[exchange]()
     symbols = feed.symbol_mapping()
