@@ -110,7 +110,7 @@ class BackendBookCallback:
         if not book.timestamp:
             data['timestamp'] = receipt_timestamp
         data['receipt_timestamp'] = receipt_timestamp
-        await self.write_ticker(data)
+        await self.write(data, key='ticker')
 
     async def __call__(self, book, receipt_timestamp: float):
         # Write best bid ask to ticker directly

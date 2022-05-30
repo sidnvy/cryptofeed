@@ -11,6 +11,7 @@ from typing import List
 import re
 
 from cryptofeed.backends.kafka import BookKafka, TradeKafka, TickerKafka, OpenInterestKafka, LiquidationsKafka, FundingKafka, CandlesKafka
+from cryptofeed.backends.victoriametrics import TradeVictoriaMetrics, FundingVictoriaMetrics, BookVictoriaMetrics, TickerVictoriaMetrics, OpenInterestVictoriaMetrics, LiquidationsVictoriaMetrics, CandlesVictoriaMetrics
 
 from cryptofeed import FeedHandler
 from cryptofeed.exchanges import EXCHANGE_MAP
@@ -147,6 +148,17 @@ def load_config() -> List[Feed]:
             CANDLES: CandlesSocket(host, **kwargs),
             OPEN_INTEREST: OpenInterestSocket(host, **kwargs),
             LIQUIDATIONS: LiquidationsSocket(host, **kwargs)
+        }
+    elif backend == 'VICTORIAMETRICS':
+        args = (host, port)
+        cbs = {
+            L2_BOOK: BookVictoriaMetrics(*args, snapshot_interval=snap_interval, snapshots_only=snap_only, extract_ticker=ticker_from_book),
+            TRADES: TradeVictoriaMetrics(*args),
+            TICKER: TickerVictoriaMetrics(*args),
+            FUNDING: FundingVictoriaMetrics(*args),
+            CANDLES: CandlesVictoriaMetrics(*args),
+            OPEN_INTEREST: OpenInterestVictoriaMetrics(*args),
+            LIQUIDATIONS: LiquidationsVictoriaMetrics(*args)
         }
     elif backend == 'INFLUX':
         args = (host, org, bucket, token)
