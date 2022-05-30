@@ -11,7 +11,7 @@ from .phemex import Phemex
 from .ascendex import AscendEX
 from .ascendex_futures import AscendEXFutures
 from .bequant import Bequant
-from .binance import Binance
+# from .binance import Binance
 from .binance_delivery import BinanceDelivery
 from .binance_futures import BinanceFutures
 from .binance_us import BinanceUS
@@ -35,6 +35,7 @@ from .ftx import FTX
 from .ftx_us import FTXUS
 from .ftx_tr import FTXTR
 from .gateio import Gateio
+from .gateio_futures import GateioFutures
 from .gemini import Gemini
 from .hitbtc import HitBTC
 from .huobi import Huobi
@@ -58,7 +59,7 @@ from .zb_futures import ZbFutures
 EXCHANGE_MAP = {
     ASCENDEX: AscendEX,
     ASCENDEX_FUTURES: AscendEXFutures,
-    BEQUANT: Bequant,
+    # BEQUANT: Bequant,
     BINANCE_DELIVERY: BinanceDelivery,
     BINANCE_FUTURES: BinanceFutures,
     BINANCE_US: BinanceUS,
@@ -84,6 +85,7 @@ EXCHANGE_MAP = {
     FTX_US: FTXUS,
     FTX_TR: FTXTR,
     GATEIO: Gateio,
+    GATEIO_FUTURES: GateioFutures,
     GEMINI: Gemini,
     HITBTC: HitBTC,
     HUOBI_DM: HuobiDM,
