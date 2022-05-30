@@ -44,8 +44,8 @@ def _filter_symbols(symbols: List[str], symbol_filter: str) -> List[str]:
     pat = re.compile(symbol_filter)
     return list(filter(lambda s: pat.match(s), symbols))
 
-def load_config() -> List[Feed]:
-    exchange = os.environ.get('EXCHANGE')
+def load_config(exchange) -> List[Feed]:
+    # exchange = os.environ.get('EXCHANGE')
     symbols = os.environ.get('SYMBOLS')
     hot_symbols = int(os.environ.get('HOT_SYMBOLS', 0))
 
@@ -221,8 +221,10 @@ def load_config() -> List[Feed]:
 
 def main():
     fh = FeedHandler()
-    for cfg in load_config():
-        fh.add_feed(cfg)
+    exchanges = os.environ['EXCHANGES'].split(',')
+    for exchange in exchanges:
+        for cfg in load_config(exchange):
+            fh.add_feed(cfg)
     fh.run()
 
 if __name__ == '__main__':
