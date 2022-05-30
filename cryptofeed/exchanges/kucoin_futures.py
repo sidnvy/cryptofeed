@@ -5,6 +5,7 @@ Copyright (C) 2017-2022 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
+import asyncio
 from decimal import Decimal
 import logging
 import time
@@ -33,7 +34,8 @@ class KuCoinFutures(Feed):
     valid_candle_intervals = {'1m', '3m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '1w'}
     candle_interval_map = {'1m': '1min', '3m': '3min', '15m': '15min', '30m': '30min', '1h': '1hour', '2h': '2hour', '4h': '4hour', '6h': '6hour', '8h': '8hour', '12h': '12hour', '1d': '1day', '1w': '1week'}
     websocket_channels = {
-        L2_BOOK: '/contractMarket/level2',
+        # L2_BOOK: '/contractMarket/level2',  # Update
+        L2_BOOK: '/contractMarket/level2Depth5',  # Snapshot
         TRADES: '/contractMarket/execution',
         TICKER: '/contractMarket/tickerV2',
     }
@@ -143,6 +145,38 @@ class KuCoinFutures(Feed):
 
         await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, raw=data, sequence_number=int(data['sequence']))
 
+    async def _process_l2_book_snapshot(self, msg: dict, symbol: str, timestamp: float):
+        """
+        {
+           "type": "message",
+           "topic": "/contractMarket/level2Depth5:XBTUSDM",
+           "subject": "level2",
+           "data": {
+               "asks":[
+                 ["9993", "3"],
+                 ["9992", "3"],
+                 ["9991", "47"],
+                 ["9990", "32"],
+                 ["9989", "8"]
+               ],
+               "bids":[
+                 ["9988", "56"],
+                 ["9987", "15"],
+                 ["9986", "100"],
+                 ["9985", "10"],
+                 ["9984", "10"]
+
+               ],
+                 "ts": 1590634672060667000
+            }
+         }
+        """
+        pair = self.exchange_symbol_to_std_symbol(symbol)
+        bids = {Decimal(price): Decimal(amount) for price, amount in msg['data']['bids']}
+        asks = {Decimal(price): Decimal(amount) for price, amount in msg['data']['asks']}
+        self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=float(msg['data']['ts']) / 1000000000, raw=msg)
+
     async def _process_l2_book(self, msg: dict, symbol: str, timestamp: float):
         """
         {
@@ -210,7 +244,8 @@ class KuCoinFutures(Feed):
         elif topic == CANDLES:
             await self._candles(msg, symbol, timestamp)
         elif topic == L2_BOOK:
-            await self._process_l2_book(msg, symbol, timestamp)
+            # await self._process_l2_book(msg, symbol, timestamp)
+            await self._process_l2_book_snapshot(msg, symbol, timestamp)
         else:
             LOG.warning("%s: Unhandled message type %s", self.id, msg)
 
