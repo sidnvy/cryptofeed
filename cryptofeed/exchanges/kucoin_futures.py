@@ -61,7 +61,8 @@ class KuCoinFutures(Feed):
         token = address_info['data']['token']
         address = address_info['data']['instanceServers'][0]['endpoint']
         address = f"{address}?token={token}"
-        self.websocket_endpoints = [WebsocketEndpoint(address, options={'ping_interval': address_info['data']['instanceServers'][0]['pingInterval'] / 2000})]
+        self.ping_interval = address_info['data']['instanceServers'][0]['pingInterval'] / 2000
+        self.websocket_endpoints = [WebsocketEndpoint(address, options={'ping_interval': self.ping_interval})]
         super().__init__(**kwargs)
         if any([len(self.subscription[chan]) > 100 for chan in self.subscription]):
             raise ValueError("Kucoin futures has a limit of 100 symbols per connection")
@@ -148,34 +149,65 @@ class KuCoinFutures(Feed):
     async def _process_l2_book_snapshot(self, msg: dict, symbol: str, timestamp: float):
         """
         {
-           "type": "message",
-           "topic": "/contractMarket/level2Depth5:XBTUSDM",
-           "subject": "level2",
-           "data": {
-               "asks":[
-                 ["9993", "3"],
-                 ["9992", "3"],
-                 ["9991", "47"],
-                 ["9990", "32"],
-                 ["9989", "8"]
-               ],
-               "bids":[
-                 ["9988", "56"],
-                 ["9987", "15"],
-                 ["9986", "100"],
-                 ["9985", "10"],
-                 ["9984", "10"]
-
-               ],
-                 "ts": 1590634672060667000
+            "type": "message",
+            "topic": "/contractMarket/level2Depth5:XBTUSDM",
+            "subject": "level2",
+            "data": {
+                "sequence": 1638555279835,
+                "asks": [
+                    [
+                        30669.00000000,
+                        25711
+                    ],
+                    [
+                        30670,
+                        143
+                    ],
+                    [
+                        30671,
+                        6681
+                    ],
+                    [
+                        30672,
+                        42685
+                    ],
+                    [
+                        30673,
+                        17543
+                    ]
+                ],
+                "bids": [
+                    [
+                        30668,
+                        4869
+                    ],
+                    [
+                        30666,
+                        4460
+                    ],
+                    [
+                        30665.00000000,
+                        9912
+                    ],
+                    [
+                        30663.00000000,
+                        10196
+                    ],
+                    [
+                        30654.00000000,
+                        4767
+                    ]
+                ],
+                "ts": 1653903522443,
+                "timestamp": 1653903522443
             }
-         }
+        }
         """
         pair = self.exchange_symbol_to_std_symbol(symbol)
         bids = {Decimal(price): Decimal(amount) for price, amount in msg['data']['bids']}
         asks = {Decimal(price): Decimal(amount) for price, amount in msg['data']['asks']}
         self._l2_book[pair] = OrderBook(self.id, pair, max_depth=self.max_depth, bids=bids, asks=asks)
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=float(msg['data']['ts']) / 1000000000, raw=msg)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=msg['data']['ts'] / 1000.0, raw=msg)
 
     async def _process_l2_book(self, msg: dict, symbol: str, timestamp: float):
         """
@@ -195,7 +227,7 @@ class KuCoinFutures(Feed):
         pair = self.exchange_symbol_to_std_symbol(symbol)
         if pair not in self._l2_book or sequence > self.seq_no[pair] + 1:
             if pair in self.seq_no and sequence > self.seq_no[pair] + 1:
-                LOG.warning("%s: Missing book update detected, resetting book", self.id)
+                LOG.warning("%s: Missing book %s update detected, resetting book", self.id, pair)
             await self._snapshot(symbol)
 
         data = msg['data']
@@ -219,7 +251,7 @@ class KuCoinFutures(Feed):
             self._l2_book[pair].book[side][price] = amount
             delta[side].append((price, amount))
 
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, delta=delta, raw=msg, sequence_number=data['sequence'])
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=data['timestamp'] / 1000.0, delta=delta, raw=msg, sequence_number=data['sequence'])
 
     async def message_handler(self, msg: str, conn, timestamp: float):
         msg = json.loads(msg, parse_float=Decimal)
@@ -228,7 +260,7 @@ class KuCoinFutures(Feed):
             if msg['type'] == 'error':
                 LOG.warning("%s: error from exchange %s", self.id, msg)
                 return
-            elif msg['type'] in {'welcome', 'ack'}:
+            elif msg['type'] in {'welcome', 'ack', 'pong'}:
                 return
             else:
                 LOG.warning("%s: Unhandled message type %s", self.id, msg)
@@ -251,8 +283,10 @@ class KuCoinFutures(Feed):
 
     async def subscribe(self, conn: AsyncConnection):
         self.__reset()
+        asyncio.get_event_loop().create_task(self.pager(conn))
         for chan in self.subscription:
             for symbol in self.subscription[chan]:
+                await asyncio.sleep(1/10)  # Avoid rate limit
                 await conn.write(json.dumps({
                     'id': 1,
                     'type': 'subscribe',
@@ -260,3 +294,8 @@ class KuCoinFutures(Feed):
                     # 'privateChannel': False,
                     'response': True
                 }))
+
+    async def pager(self, conn: AsyncConnection):
+        while conn.is_open:
+            await asyncio.sleep(self.ping_interval)
+            await conn.write(json.dumps({"id": str(time.time_ns()), "type": "ping"}))
