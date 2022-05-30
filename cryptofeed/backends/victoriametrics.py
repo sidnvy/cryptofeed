@@ -65,28 +65,29 @@ class VictoriaMetricsCallback(SocketCallback):
         """
         super().__init__(addr, port=port, key=key, numeric_type=float, **kwargs)
 
-    async def write(self, data: dict, custom_key=None):
+    async def write(self, data: dict):
+        # Overwrite
         data['exchange'] = unify_exchange_name(data['exchange'])
-        # Convert data to InfluxDB Line Protocol format
-        d = ''
-        t = ''
-        for key, value in data.items():
-            if key in {'timestamp', 'exchange', 'symbol', 'receipt_timestamp', 'side'}:
-                continue
-            # VictoriaMetrics does not support discrete data as values,
-            # convert strings to VictoriaMetricsDB tags.
-            if isinstance(value, str):
-                t += f',{key}={value}'
-            else:
-                d += f'{key}={value},'
-        
-        d = d + f'timestamp={data["timestamp"]},receipt_timestamp={data["receipt_timestamp"]}'
 
-        if custom_key == None:
-            custom_key = self.key
-        update = f'{custom_key},exchange={data["exchange"]},symbol={data["symbol"]}{t} {d} {self._convert_sec_to_millisec(data["timestamp"])}\n'
-        receipt_update = f'{custom_key + "_origin"},exchange={data["exchange"]},symbol={data["symbol"]}{t} {d} {self._convert_sec_to_millisec(data["receipt_timestamp"])}\n'
-        await super().write(update+receipt_update)
+        # Combine lines
+        measurement = data['key'] if 'key' in data else self.key
+        tags = self._tag_set(data)
+        fields = self._field_set(data)
+        timestamp = self._convert_sec_to_millisec(data['timestamp'])
+        receipt_timestamp = self._convert_sec_to_millisec(data['receipt_timestamp'])
+
+        line = f"{measurement},{tags} {fields} {timestamp}\n"
+        line_by_receipt = f"{measurement}_origin,{tags} {fields} {receipt_timestamp}\n"
+
+        print(line)
+        print(line_by_receipt)
+        await super().write(line+line_by_receipt)
+
+    def _tag_set(self, data: dict) -> str:
+        return f'exchange={data["exchange"]},symbol={data["symbol"]}'
+
+    def _field_set(self, data: dict) -> str:
+        return f'timestamp={data["timestamp"]},receipt_timestamp={data["receipt_timestamp"]}'
 
     def _convert_sec_to_millisec(self, sec: float) -> int:
         return int(sec * 1000)
@@ -116,9 +117,14 @@ class VictoriaMetricsBookCallback(VictoriaMetricsCallback):
 class TradeVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
     default_key = 'trades'
 
+    def _field_set(self, data: dict) -> str:
+        return f'price={data["price"]},amount={data["amount"]},timestamp={data["timestamp"]},receipt_timestamp={data["receipt_timestamp"]}'
 
 class FundingVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
     default_key = 'funding'
+
+    def _field_set(self, data: dict) -> str:
+        return f'rate={data["rate"]},next_funding_time={data["next_funding_time"]},timestamp={data["timestamp"]},receipt_timestamp={data["receipt_timestamp"]}'
 
 
 class BookVictoriaMetrics(VictoriaMetricsBookCallback, BackendBookCallback):
@@ -129,21 +135,33 @@ class BookVictoriaMetrics(VictoriaMetricsBookCallback, BackendBookCallback):
         self.extract_ticker = extract_ticker
         super().__init__(*args, **kwargs)
 
-    async def write(self, data):
-        start = f"{self.key},exchange={data['exchange']},symbol={data['symbol']},delta={str('delta' in data)}"
-        await self._write_rows(start, data)
+    # async def write(self, data):
+    #     start = f"{self.key},exchange={data['exchange']},symbol={data['symbol']},delta={str('delta' in data)}"
+    #     await self._write_rows(start, data)
+
+    def _field_set(self, data: dict) -> str:
+        return f'bid={data["bid"]},ask={data["ask"]},timestamp={data["timestamp"]},receipt_timestamp={data["receipt_timestamp"]}'
 
 
 class TickerVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
     default_key = 'ticker'
 
+    def _field_set(self, data: dict) -> str:
+        return f'bid={data["bid"]},ask={data["ask"]},timestamp={data["timestamp"]},receipt_timestamp={data["receipt_timestamp"]}'
+
 
 class OpenInterestVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
     default_key = 'open_interest'
 
+    def _field_set(self, data: dict) -> str:
+        return f'open_interest={data["open_interest"]},timestamp={data["timestamp"]},receipt_timestamp={data["receipt_timestamp"]}'
+
 
 class LiquidationsVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
     default_key = 'liquidations'
+
+    def _field_set(self, data: dict) -> str:
+        return f'quantity={data["quantity"]},price={data["price"]},timestamp={data["timestamp"]},receipt_timestamp={data["receipt_timestamp"]}'
 
 
 class CandlesVictoriaMetrics(VictoriaMetricsCallback, BackendCallback):
