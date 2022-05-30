@@ -25,9 +25,9 @@ class ZbFutures(Feed):
     id = ZB_FUTURES
     websocket_endpoints = [
         WebsocketEndpoint('wss://fapi.zb.com/usdt/ws/public/v1', instrument_filter=('QUOTE', ('USDT',))),
-        WebsocketEndpoint('wss://fapi.zb.com/qc/ws/public/v1', instrument_filter=('QUOTE', ('QC',)))
+        # WebsocketEndpoint('wss://fapi.zb.com/qc/ws/public/v1', instrument_filter=('QUOTE', ('QC',)))
     ]
-    rest_endpoints = [RestEndpoint('https://fapi.zb.com', routes=Routes(['/usdt/Server/api/v2/config/marketList', '/qc/Server/api/v2/config/marketList']))]
+    rest_endpoints = [RestEndpoint('https://fapi.zb.com', routes=Routes(['/usdt/Server/api/v2/config/marketList']))]
     websocket_channels = {
         L2_BOOK: 'DepthWhole',  # Depth increment update fails all the time (bid ask overlaps), use snapshot instead
         TRADES: 'Trade',
@@ -43,18 +43,18 @@ class ZbFutures(Feed):
         ret = {}
         info = defaultdict(dict)
 
-        for d in data:
-            for entry in d['data']:
-                if entry['canTrade'] != True:
-                    continue
-                s = Symbol(
-                    entry['sellerCurrencyName'].upper(),
-                    entry['buyerCurrencyName'].upper(),
-                    type=PERPETUAL
-                )
-                ret[s.normalized] = entry['symbol']
-                info['tick_size'][s.normalized] = entry['minAmount']  # zb does not provide tick size
-                info['instrument_type'][s.normalized] = s.type
+        # for d in data:
+        for entry in data['data']:
+            if entry['canTrade'] != True:
+                continue
+            s = Symbol(
+                entry['sellerCurrencyName'].upper(),
+                entry['buyerCurrencyName'].upper(),
+                type=PERPETUAL
+            )
+            ret[s.normalized] = entry['symbol']
+            info['tick_size'][s.normalized] = entry['minAmount']  # zb does not provide tick size
+            info['instrument_type'][s.normalized] = s.type
         return ret, info
 
     def __reset(self):
