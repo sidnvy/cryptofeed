@@ -79,8 +79,6 @@ class VictoriaMetricsCallback(SocketCallback):
         line = f"{measurement},{tags} {fields} {timestamp}\n"
         line_by_receipt = f"{measurement}_origin,{tags} {fields} {receipt_timestamp}\n"
 
-        print(line)
-        print(line_by_receipt)
         await super().write(line+line_by_receipt)
 
     def _tag_set(self, data: dict) -> str:
