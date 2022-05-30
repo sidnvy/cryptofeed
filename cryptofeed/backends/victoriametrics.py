@@ -65,26 +65,27 @@ class VictoriaMetricsCallback(SocketCallback):
         """
         super().__init__(addr, port=port, key=key, numeric_type=float, **kwargs)
 
-    async def write(self, data: dict, key=None):
+    async def write(self, data: dict, custom_key=None):
         data['exchange'] = unify_exchange_name(data['exchange'])
         # Convert data to InfluxDB Line Protocol format
         d = ''
         t = ''
         for key, value in data.items():
-            if key in {'timestamp', 'exchange', 'symbol', 'receipt_timestamp'}:
+            if key in {'timestamp', 'exchange', 'symbol', 'receipt_timestamp', 'side'}:
                 continue
             # VictoriaMetrics does not support discrete data as values,
             # convert strings to VictoriaMetricsDB tags.
-            if isinstance(value, str) and key != 'side':
+            if isinstance(value, str):
                 t += f',{key}={value}'
             else:
-                d += f'{key}={value}'
+                d += f'{key}={value},'
+        
+        d = d + f'timestamp={data["timestamp"]},receipt_timestamp={data["receipt_timestamp"]}'
 
-        if key == None:
-            key = self.key
-
-        update = f'{key},exchange={data["exchange"]},symbol={data["symbol"]}{t} {d} {self._convert_sec_to_millisec(data["timestamp"])}\n'
-        receipt_update = f'{key},exchange={data["exchange"]},symbol={data["symbol"]}{t} {d} {self._convert_sec_to_millisec(data["receipt_timestamp"])}\n'
+        if custom_key == None:
+            custom_key = self.key
+        update = f'{custom_key},exchange={data["exchange"]},symbol={data["symbol"]}{t} {d} {self._convert_sec_to_millisec(data["timestamp"])}\n'
+        receipt_update = f'{custom_key + "_origin"},exchange={data["exchange"]},symbol={data["symbol"]}{t} {d} {self._convert_sec_to_millisec(data["receipt_timestamp"])}\n'
         await super().write(update+receipt_update)
 
     def _convert_sec_to_millisec(self, sec: float) -> int:
