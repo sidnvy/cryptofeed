@@ -7,6 +7,7 @@ associated with this software.
 '''
 from collections import defaultdict
 import logging
+import os
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
 from cryptofeed.backends.socket import SocketCallback
@@ -63,6 +64,8 @@ class VictoriaMetricsCallback(SocketCallback):
          key: str
            key to use when writing data
         """
+        self.region = os.environ.get('REGION')
+
         super().__init__(addr, port=port, key=key, numeric_type=float, **kwargs)
 
     async def write(self, data: dict):
@@ -82,6 +85,8 @@ class VictoriaMetricsCallback(SocketCallback):
         await super().write(line+line_by_receipt)
 
     def _tag_set(self, data: dict) -> str:
+        if self.region:
+            return f'exchange={data["exchange"]},symbol={data["symbol"]},region={self.region}'
         return f'exchange={data["exchange"]},symbol={data["symbol"]}'
 
     def _field_set(self, data: dict) -> str:

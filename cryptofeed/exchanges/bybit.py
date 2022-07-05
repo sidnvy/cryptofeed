@@ -376,6 +376,27 @@ class Bybit(Feed):
             await self.callback(TRADES, t, timestamp)
 
     async def _book(self, msg: dict, timestamp: float):
+        """
+        {
+            "topic": "orderBookL2_25.BTCUSDT",
+            "type": "delta",
+            "data": {
+                "delete": [],
+                "update": [
+                    {
+                        "price": "30650.00",
+                        "symbol": "BTCUSDT",
+                        "id": "306500000",
+                        "side": "Buy",
+                        "size": 0.668
+                    }
+                ],
+                "insert": []
+            },
+            "cross_seq": "12147413468",
+            "timestamp_e6": "1653910889195014"
+        }
+        """
         pair = self.exchange_symbol_to_std_symbol(msg['topic'].split('.')[-1])
         update_type = msg['type']
         data = msg['data']
@@ -407,10 +428,10 @@ class Bybit(Feed):
                     self._l2_book[pair].book[side][price] = amount
 
         # timestamp is in microseconds
-        ts = msg['timestamp_e6']
+        ts = float(msg['timestamp_e6'])
         if isinstance(ts, str):
             ts = int(ts)
-        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts / 1000000, raw=msg, delta=delta)
+        await self.book_callback(L2_BOOK, self._l2_book[pair], timestamp, timestamp=ts / 1000000.0, raw=msg, delta=delta)
 
     async def _order(self, msg: dict, timestamp: float):
         """
