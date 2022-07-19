@@ -37,7 +37,7 @@ class KuCoinFutures(Feed):
         # L2_BOOK: '/contractMarket/level2',  # Update
         L2_BOOK: '/contractMarket/level2Depth5',  # Snapshot
         TRADES: '/contractMarket/execution',
-        TICKER: '/contractMarket/tickerV2',
+        # TICKER: '/contractMarket/tickerV2',
     }
 
     @classmethod

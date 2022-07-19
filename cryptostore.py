@@ -85,7 +85,13 @@ def load_config(exchange, hot_symbols=None) -> List[Feed]:
     bucket = os.environ.get('BUCKET')
     token = os.environ.get('TOKEN')
 
-    ticker_from_book = bool(os.environ.get('TICKER_FROM_BOOK', False))
+    ex = EXCHANGE_MAP[exchange]
+
+    ticker_from_book = True if TICKER not in ex.websocket_channels else False
+
+    if ticker_from_book and TICKER in channels:
+        channels.remove(TICKER)
+        channels.append(L2_BOOK)
 
     cbs = None
     if backend == 'REDIS' or backend == 'REDISSTREAM':
@@ -199,7 +205,6 @@ def load_config(exchange, hot_symbols=None) -> List[Feed]:
     for r in remove:
         del cbs[r]
 
-    ex = EXCHANGE_MAP[exchange]
 
     if len(symbols) == 1:
         symbols = _filter_symbols(ex.symbols(), symbols[0])
