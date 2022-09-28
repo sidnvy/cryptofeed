@@ -24,6 +24,7 @@ from cryptofeed.backends.postgres import BookPostgres, TradePostgres, TickerPost
 from cryptofeed.backends.socket import BookSocket, TradeSocket, TickerSocket, FundingSocket, CandlesSocket, OpenInterestSocket, LiquidationsSocket
 from cryptofeed.backends.influxdb import BookInflux, TradeInflux, TickerInflux, FundingInflux, CandlesInflux, OpenInterestInflux, LiquidationsInflux
 from cryptofeed.backends.quest import BookQuest, TradeQuest, TickerQuest, FundingQuest, CandlesQuest, OpenInterestQuest, LiquidationsQuest
+from cryptofeed.backends.parquet import BookParquet, TradeParquet, TickerParquet, FundingParquet, CandlesParquet, OpenInterestParquet, LiquidationsParquet
 from cryptofeed.util.symbol import cmc_hot_symbol_regex
 
 import logging
@@ -84,6 +85,7 @@ def load_config(exchange, hot_symbols=None) -> List[Feed]:
     org = os.environ.get('ORG')
     bucket = os.environ.get('BUCKET')
     token = os.environ.get('TOKEN')
+    url = os.environ.get('URL')
 
     ex = EXCHANGE_MAP[exchange]
 
@@ -175,6 +177,17 @@ def load_config(exchange, hot_symbols=None) -> List[Feed]:
             CANDLES: CandlesInflux(*args),
             OPEN_INTEREST: OpenInterestInflux(*args),
             LIQUIDATIONS: LiquidationsInflux(*args)
+        }
+    elif backend == 'PARQUET':
+        args = (url,)
+        cbs = {
+            L2_BOOK: BookParquet(*args),
+            TRADES: TradeParquet(*args),
+            TICKER: TickerParquet(*args),
+            FUNDING: FundingParquet(*args),
+            CANDLES: CandlesParquet(*args),
+            OPEN_INTEREST: OpenInterestParquet(*args),
+            LIQUIDATIONS: LiquidationsParquet(*args)
         }
     elif backend == 'QUEST':
         kwargs = {'host': host, 'port': port if port else 9009}
