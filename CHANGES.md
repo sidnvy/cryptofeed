@@ -1,6 +1,18 @@
 ## Changelog
 
-### 2.2.3
+### 2.3.1
+ * Bugfix: timestamp not reset correctly on reconnect
+
+### 2.3.0 (2022-09-04)
+ * Bugfix: added list and str support to websocket_endpoint creation (allows more than 200 symbols on Binance)
+ * Feature: Add support for OKx streaming candles
+ * Bugfix: Binance Futures, double slash in open interest url
+ * Update: Set 'next_funding_rate' to None in Bybit if not present
+ * Feature: Added authentication to private channels of Bittrex. ORDER_INFO and BALANCES implemented.
+ * Bugfix: Bitget, bug in subscribe method
+ * Update: Poloniex API update
+
+### 2.2.3 (2022-05-29)
  * Feature: Authenticated channel support for Bitget
  * New Exchange: FTX TR
  * New Exchange: AscendEX Futures
@@ -19,6 +31,7 @@
  * Update: Send Phemex subscriptions one symbol at a time
  * Bugfix: BitDotCom, the subscription message for perpetuals was incorrect
  * Bugfix: Allow empty subscriptions (channel with no symbols) for FTX
+ * Update: Add SOL and USDC to Deribit symbol mapping
 
 ### 2.2.2 (2022-04-17)
  * Bugfix: OKX filled amount being reported incorrectly in OrderInfo

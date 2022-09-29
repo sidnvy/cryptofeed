@@ -23,7 +23,7 @@ LOG = logging.getLogger('feedhandler')
 class Deribit(Feed, DeribitRestMixin):
     id = DERIBIT
     websocket_endpoints = [WebsocketEndpoint('wss://www.deribit.com/ws/api/v2', sandbox='wss://test.deribit.com/ws/api/v2')]
-    rest_endpoints = [RestEndpoint('https://www.deribit.com', sandbox='https://test.deribit.com', routes=Routes(['/api/v2/public/get_instruments?currency=BTC', '/api/v2/public/get_instruments?currency=ETH']))]
+    rest_endpoints = [RestEndpoint('https://www.deribit.com', sandbox='https://test.deribit.com', routes=Routes(['/api/v2/public/get_instruments?currency=BTC', '/api/v2/public/get_instruments?currency=ETH', '/api/v2/public/get_instruments?currency=USDC', '/api/v2/public/get_instruments?currency=SOL']))]
 
     websocket_channels = {
         L1_BOOK: 'quote',
@@ -61,6 +61,8 @@ class Deribit(Feed, DeribitRestMixin):
                 quote = e['quote_currency']
                 stype = e['kind'] if e['settlement_period'] != 'perpetual' else PERPETUAL
                 otype = e.get('option_type')
+                if stype in ('option_combo', 'future_combo'):
+                    continue
                 strike_price = e.get('strike')
                 strike_price = int(strike_price) if strike_price else None
                 expiry = e['expiration_timestamp'] / 1000
