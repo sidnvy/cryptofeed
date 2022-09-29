@@ -24,6 +24,7 @@ class ParquetCallback:
     }
     TIMESTAMP_FORMAT = {
         TRADES: '%Y%m%d',
+        TICKER: '%Y%m%d',
         L2_BOOK: '%Y%m%d',
         OPEN_INTEREST: '%Y%m',
         LIQUIDATIONS: '%Y%m',
@@ -98,7 +99,7 @@ class ParquetCallback:
         'funding_rate': 'timestamp',
     }
    
-    def __init__(self, url: str, numeric_type = float, none_to = None, data_type: Optional[str] = None, **kwargs):
+    def __init__(self, url: str, buffer_limit=20000, numeric_type = float, none_to = None, data_type: Optional[str] = None, **kwargs):
         parsed_url = urllib.parse.urlparse(url)
         path = parsed_url.path
         if path[0] == '/':
@@ -139,6 +140,7 @@ class ParquetCallback:
         else:
             raise ValueError(f'unrecognized url {url}')
             
+        self.buffer_limit = buffer_limit
         self.dtype = data_type if data_type else self.default_dtype
         self.numeric_type = numeric_type
         self.none_to = none_to
@@ -150,18 +152,10 @@ class ParquetCallback:
         atexit.register(self.close)
 
         
-    @staticmethod
-    def _need_flush(buffer, new_data, partition_cols):
-        return (
-                len(buffer) > 0
-                and
-                (new_data.loc[new_data.index[0], partition_cols] != buffer[-1].loc[
-                    buffer[-1].index[-1], partition_cols]).any()
-        )
-    
-    @staticmethod
-    def _need_immediate_flush(buffer, new_data, partition_cols):
-        return (new_data.loc[new_data.index[0], partition_cols] != new_data.loc[new_data.index[-1], partition_cols]).any()
+    def _need_flush(self, buffer, new_data, partition_cols):
+        # return (new_data.loc[new_data.index[0], partition_cols] != new_data.loc[new_data.index[-1], partition_cols]).any()
+        return len(buffer) >= self.buffer_limit
+
     
     def _flush(self, buffer, path, partition_cols):
         if len(buffer) == 0:
@@ -179,10 +173,7 @@ class ParquetCallback:
         buffer.clear()
         
     def _append_data(self, buffer, path, new_data, partition_cols):
-        if self._need_immediate_flush(buffer, new_data, partition_cols):
-            buffer.append(new_data)
-            self._flush(buffer, path, partition_cols)
-        elif self._need_flush(buffer, new_data, partition_cols):
+        if self._need_flush(buffer, new_data, partition_cols):
             self._flush(buffer, path, partition_cols)
             buffer.append(new_data)
         else:

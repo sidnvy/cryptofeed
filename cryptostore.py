@@ -181,7 +181,7 @@ def load_config(exchange, hot_symbols=None) -> List[Feed]:
     elif backend == 'PARQUET':
         args = (url,)
         cbs = {
-            L2_BOOK: BookParquet(*args),
+            L2_BOOK: BookParquet(*args, snapshot_interval=snap_interval, snapshots_only=snap_only, extract_ticker=ticker_from_book),
             TRADES: TradeParquet(*args),
             TICKER: TickerParquet(*args),
             FUNDING: FundingParquet(*args),
