@@ -115,24 +115,7 @@ class ParquetCallback:
             self.fs_listdir = os.listdir
         elif parsed_url.scheme == 's3':
             args = {}
-            if parsed_url.hostname is not None:
-                if parsed_url.port is not None:
-                    endpoint_url = f'https://{parsed_url.hostname}:{parsed_url.port}'
-                else:
-                    endpoint_url = f'https://{parsed_url.hostname}'
-                args['client_kwargs'] = {
-                    'endpoint_url': endpoint_url,
-                }
-                args['config_kwargs'] = {
-                    's3': {
-                        'addressing_style': 'virtual',  # compatible with aliyun oss
-                    },
-                }
-            if parsed_url.username is None or parsed_url.password is None:
-                args['anon'] = True
-            else:
-                args['key'] = parsed_url.username
-                args['secret'] = parsed_url.password
+            path = parsed_url.hostname + parsed_url.path
             
             self.fs = s3fs.S3FileSystem(**args)
             self.fs_makedirs = self.fs.makedirs
