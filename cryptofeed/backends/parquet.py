@@ -2,10 +2,10 @@ import atexit
 from typing import Optional
 from collections import defaultdict
 import urllib.parse
-import s3fs
 import os
 import pyarrow as pa
 import pyarrow.parquet as pq
+from pyarrow import fs
 import pandas as pd
 
 from cryptofeed.backends.backend import BackendBookCallback, BackendCallback
@@ -115,11 +115,14 @@ class ParquetCallback:
             self.fs_listdir = os.listdir
         elif parsed_url.scheme == 's3':
             args = {}
+            region = os.environ.get('REGION')
+            if region:
+                args['region'] = region
             path = parsed_url.hostname + parsed_url.path
             
-            self.fs = s3fs.S3FileSystem(**args)
-            self.fs_makedirs = self.fs.makedirs
-            self.fs_listdir = self.fs.ls
+            self.fs = fs.S3FileSystem(**args)
+            self.fs_makedirs = self.fs.create_dir
+            self.fs_listdir = None
         else:
             raise ValueError(f'unrecognized url {url}')
             
@@ -130,7 +133,7 @@ class ParquetCallback:
         self.root_path = path + 'parquet/'
         self.dtype_path = f'{self.root_path}{self.dtype}'
         self.buffer = []
-        self.fs_makedirs(self.dtype_path, exist_ok=True)
+        self.fs_makedirs(self.dtype_path)
 
         atexit.register(self.close)
 
