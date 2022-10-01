@@ -24,6 +24,7 @@ RUN pip install asyncpg
 RUN pip install aiokafka
 RUN pip install s3fs
 RUN pip install pyarrow
+RUN pip install pandas
 
 
 FROM base as application
