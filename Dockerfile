@@ -22,6 +22,7 @@ RUN pip install pymongo[srv]
 RUN pip install motor
 RUN pip install asyncpg
 RUN pip install aiokafka
+RUN pip install s3fs
 
 
 FROM base as application
