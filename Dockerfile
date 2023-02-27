@@ -18,6 +18,8 @@ RUN python -m build --wheel
 
 RUN pip install ./dist/*.whl --force
 RUN pip install aioredis
+RUN pip install hiredis
+RUN pip install redis
 RUN pip install pymongo[srv]
 RUN pip install motor
 RUN pip install asyncpg
