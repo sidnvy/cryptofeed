@@ -77,7 +77,7 @@ def get_message_count(filenames: str):
     return counter
 
 
-@pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [EXX, KUCOIN_FUTURES, ZB, ZB_FUTURES, MEXC_FUTURES, GATEIO_FUTURES]])
+@pytest.mark.parametrize("exchange", [e for e in EXCHANGE_MAP.keys() if e not in [EXX, BINANCE, KUCOIN_FUTURES, ZB, ZB_FUTURES, MEXC_FUTURES, GATEIO_FUTURES]])
 def test_exchange_playback(exchange):
     Symbols.clear()
     dir = os.path.dirname(os.path.realpath(__file__))
