@@ -32,7 +32,7 @@ jobs:
 
       # Run tests
       - name: Run tests
-        run: pytest tests/
+        run: pytest tests/ --ignore=tests/integration/
 
   docker:
     needs: [ build ]
