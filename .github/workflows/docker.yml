@@ -28,6 +28,7 @@ jobs:
           pip install flake8 pytest cython
           pip install aiohttp==3.8.1
           pip install pyyaml
+          pip install redis
           python setup.py install
 
       # Run tests
