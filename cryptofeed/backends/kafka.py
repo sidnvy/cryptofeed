@@ -46,7 +46,7 @@ class KafkaCallback(BackendQueue):
         # Do not allow writer to send messages until connection confirmed
         self.running = False
 
-    def _default_serializer(self, to_bytes: dict | str) -> ByteString:
+    def _default_serializer(self, to_bytes: dict) -> ByteString:
         if isinstance(to_bytes, dict):
             return json.dumpb(to_bytes)
         elif isinstance(to_bytes, str):

@@ -32,7 +32,7 @@ class BitDotCom(Feed):
     ]
     rest_endpoints = [
         RestEndpoint('https://spot-api.bit.com', instrument_filter=('TYPE', (SPOT,)), sandbox='https://betaspot-api.bitexch.dev', routes=Routes('/spot/v1/instruments', authentication='/spot/v1/ws/auth')),
-        RestEndpoint('https://api.bit.com', instrument_filter=('TYPE', (OPTION, FUTURES, PERPETUAL)), sandbox='https://betaapi.bitexch.dev', routes=Routes('/v1/instruments?currency={}&active=true', currencies='/v1/currencies', authentication='/v1/ws/auth'))
+        RestEndpoint('https://api.bit.com', instrument_filter=('TYPE', (OPTION, FUTURES, PERPETUAL)), sandbox='https://betaapi.bitexch.dev', routes=Routes('/linear/v1/instruments?currency=USD&active=true', authentication='/v1/ws/auth'))
     ]
 
     websocket_channels = {
